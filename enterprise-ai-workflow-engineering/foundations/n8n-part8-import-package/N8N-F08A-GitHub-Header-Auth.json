@@ -1,0 +1,117 @@
+{
+  "name": "N8N-F08A-GitHub-Header-Auth",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        0
+      ],
+      "id": "a7719967-4f3b-4a00-b24b-65832b44ba18",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"provider\": \"GitHub\",\n  \"authType\": \"Bearer Token via Header Auth\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -300,
+        0
+      ],
+      "id": "96ac6855-4d90-44d7-bddc-660370b5191d",
+      "name": "Create Request Context"
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "url": "https://api.github.com/user",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -60,
+        0
+      ],
+      "id": "3aba7e48-3bc6-498e-8587-b55c0aa781a2",
+      "name": "GitHub Authenticated Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const user = $json;\n\nreturn [\n  {\n    json: {\n      success: true,\n      provider: 'GitHub',\n      authentication: 'HTTP Header Auth',\n      user: {\n        id: user.id ?? null,\n        login: user.login ?? null,\n        name: user.name ?? null,\n        company: user.company ?? null,\n        publicRepos: user.public_repos ?? null\n      },\n      security: {\n        secretIncludedInWorkflow: false,\n        note: 'Token is stored in n8n Credentials, not workflow JSON.'\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        0
+      ],
+      "id": "37eb2315-8c5b-41dd-8e3d-6e065f61c5ee",
+      "name": "Build Safe Result"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Create Request Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Request Context": {
+      "main": [
+        [
+          {
+            "node": "GitHub Authenticated Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub Authenticated Request": {
+      "main": [
+        [
+          {
+            "node": "Build Safe Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "4ca613ce-ccc9-4279-b641-4b91b89b7510",
+  "meta": {},
+  "tags": []
+}

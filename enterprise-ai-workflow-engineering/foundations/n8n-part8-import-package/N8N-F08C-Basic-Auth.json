@@ -1,0 +1,78 @@
+{
+  "name": "N8N-F08C-Basic-Auth",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        0
+      ],
+      "id": "f7fadadd-764d-48ca-abb7-d1b73d933c73",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "url": "https://httpbin.org/basic-auth/n8n/masterclass",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -160,
+        0
+      ],
+      "id": "f84f2d8a-322d-42b6-9e0e-3bb2997dc5a1",
+      "name": "Basic Auth Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: $json.authenticated === true,\n      authentication: 'HTTP Basic Auth',\n      usernameReturned: $json.user ?? null,\n      secretIncludedInWorkflow: false\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        100,
+        0
+      ],
+      "id": "cc97f27c-79f6-47a9-8a6d-6db5a300c17c",
+      "name": "Build Basic Auth Result"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Basic Auth Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic Auth Request": {
+      "main": [
+        [
+          {
+            "node": "Build Basic Auth Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9df3ac59-05dd-4693-9304-6a707822e85f",
+  "meta": {},
+  "tags": []
+}

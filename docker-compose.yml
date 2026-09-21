@@ -5,6 +5,9 @@ services:
     container_name: eaiw-postgres
     restart: unless-stopped
 
+    ports:
+      - "5432:5432"
+
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -23,6 +26,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 5s
 
     networks:
       - eaiw
@@ -37,7 +41,6 @@ services:
       - "5678:5678"
 
     environment:
-
       DB_TYPE: postgresdb
 
       DB_POSTGRESDB_HOST: postgres
@@ -63,7 +66,6 @@ services:
       EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
 
     depends_on:
-
       postgres:
         condition: service_healthy
 
@@ -75,13 +77,10 @@ services:
 
 
 volumes:
-
   postgres_data:
-
   n8n_data:
 
 
 networks:
-
   eaiw:
     driver: bridge

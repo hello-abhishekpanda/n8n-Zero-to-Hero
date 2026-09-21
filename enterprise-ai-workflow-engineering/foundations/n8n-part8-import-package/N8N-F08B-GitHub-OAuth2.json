@@ -1,0 +1,91 @@
+{
+  "name": "N8N-F08B-GitHub-OAuth2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -440,
+        0
+      ],
+      "id": "0c90f8e4-cd26-42a5-a20e-1a008a7904ee",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "url": "https://api.github.com/user",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -180,
+        0
+      ],
+      "id": "b40fbc16-69ff-4e7f-85d3-1e1b36937ed2",
+      "name": "GitHub OAuth2 Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const user = $json;\n\nreturn [\n  {\n    json: {\n      success: true,\n      provider: 'GitHub',\n      authentication: 'OAuth2',\n      user: {\n        id: user.id ?? null,\n        login: user.login ?? null,\n        name: user.name ?? null,\n        publicRepos: user.public_repos ?? null\n      },\n      security: {\n        secretIncludedInWorkflow: false,\n        note: 'OAuth access/refresh tokens stay inside n8n Credentials.'\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        0
+      ],
+      "id": "b68877ce-3b47-400e-82ca-f0e800f32695",
+      "name": "Build OAuth Result"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "GitHub OAuth2 Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub OAuth2 Request": {
+      "main": [
+        [
+          {
+            "node": "Build OAuth Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d5e1b5c2-c280-4df6-bbe5-20f0d40e996e",
+  "meta": {},
+  "tags": []
+}

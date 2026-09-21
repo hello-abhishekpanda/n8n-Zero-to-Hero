@@ -1,0 +1,278 @@
+{
+  "name": "N8N-F09-PostgreSQL-Business-Data-FIXED",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customer-persistence",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1100,
+        0
+      ],
+      "id": "0b45b822-087a-4a3e-890c-9f4386d82397",
+      "name": "Customer Persistence Webhook",
+      "webhookId": "21222ef2-3d84-4de7-ae02-8e1a98512826"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? {};\n\nconst requiredFields = ['name', 'email', 'company'];\n\nconst missingFields = requiredFields.filter((field) => {\n  const value = body[field];\n  return value === undefined ||\n    value === null ||\n    String(value).trim() === '';\n});\n\nconst email = String(body.email ?? '').trim();\nconst emailLooksValid =\n  email === '' || /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);\n\nreturn [\n  {\n    json: {\n      ...$json,\n      validation: {\n        valid: missingFields.length === 0 && emailLooksValid,\n        missingFields,\n        invalidEmail: !emailLooksValid\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        0
+      ],
+      "id": "83b9f5b0-f979-4f9f-a058-ddab0c0b9379",
+      "name": "Validate Customer"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0552724d-52f2-4127-9980-52b502c63e50",
+              "leftValue": "={{ $json.validation.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -660,
+        0
+      ],
+      "id": "0677b45a-34a9-4eb7-ad15-82aa67cfa917",
+      "name": "Is Customer Valid?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const requestId =\n  `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\n\nreturn [{\n  json: {\n    ...$json,\n    requestId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        -120
+      ],
+      "id": "f83a57ff-0af4-42f8-b343-87fb1274b64f",
+      "name": "Create Request ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? {};\n\nreturn [{\n  json: {\n    requestId: $json.requestId,\n    customer: {\n      name: String(body.name).trim(),\n      email: String(body.email).trim().toLowerCase(),\n      company: String(body.company).trim(),\n      budget: body.budget === undefined || body.budget === null || body.budget === ''\n        ? null\n        : Number(body.budget),\n      employees: body.employees === undefined || body.employees === null || body.employees === ''\n        ? null\n        : Number(body.employees),\n      timelineMonths: body.timelineMonths === undefined || body.timelineMonths === null || body.timelineMonths === ''\n        ? null\n        : Number(body.timelineMonths),\n      source: String(body.source ?? 'webhook').trim()\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        -120
+      ],
+      "id": "7064e2ad-b588-41d5-9730-b02fc3c49d61",
+      "name": "Normalize Customer"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH upserted AS (\n  INSERT INTO public.customers\n  (\n    request_id,\n    name,\n    email,\n    company,\n    budget,\n    employees,\n    timeline_months,\n    source\n  )\n  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n  ON CONFLICT (email)\n  DO UPDATE SET\n    request_id = EXCLUDED.request_id,\n    name = EXCLUDED.name,\n    company = EXCLUDED.company,\n    budget = EXCLUDED.budget,\n    employees = EXCLUDED.employees,\n    timeline_months = EXCLUDED.timeline_months,\n    source = EXCLUDED.source,\n    updated_at = NOW()\n  RETURNING\n    id,\n    request_id,\n    name,\n    email,\n    company,\n    budget,\n    employees,\n    timeline_months,\n    status,\n    source,\n    created_at,\n    updated_at\n),\naudited AS (\n  INSERT INTO public.customer_audit\n  (\n    customer_id,\n    request_id,\n    event_type,\n    event_data\n  )\n  SELECT\n    id,\n    request_id,\n    'CUSTOMER_UPSERTED',\n    jsonb_build_object(\n      'email', email,\n      'company', company,\n      'status', status,\n      'budget', budget,\n      'employees', employees,\n      'timelineMonths', timeline_months\n    )\n  FROM upserted\n  RETURNING\n    id AS audit_id,\n    customer_id,\n    request_id,\n    event_type,\n    created_at AS audit_created_at\n)\nSELECT\n  u.id,\n  u.request_id,\n  u.name,\n  u.email,\n  u.company,\n  u.budget,\n  u.employees,\n  u.timeline_months,\n  u.status,\n  u.source,\n  u.created_at,\n  u.updated_at,\n  a.audit_id,\n  a.event_type,\n  a.audit_created_at\nFROM upserted u\nJOIN audited a\n  ON a.customer_id = u.id\n AND a.request_id = u.request_id;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.requestId,\n  $json.customer.name,\n  $json.customer.email,\n  $json.customer.company,\n  $json.customer.budget,\n  $json.customer.employees,\n  $json.customer.timelineMonths,\n  $json.customer.source\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        120,
+        -120
+      ],
+      "id": "b12cb1ef-6087-433d-9bd1-ee27611dc117",
+      "name": "Persist Customer + Audit"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $json;\n\nreturn [{\n  json: {\n    success: true,\n    message: 'Customer persisted and audit event recorded successfully',\n    requestId: row.request_id,\n    status: 'CREATED_OR_UPDATED',\n    customer: {\n      id: row.id,\n      name: row.name,\n      email: row.email,\n      company: row.company,\n      budget: row.budget,\n      employees: row.employees,\n      timelineMonths: row.timeline_months,\n      businessStatus: row.status,\n      source: row.source,\n      createdAt: row.created_at,\n      updatedAt: row.updated_at\n    },\n    audit: {\n      id: row.audit_id,\n      eventType: row.event_type,\n      createdAt: row.audit_created_at\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        430,
+        -120
+      ],
+      "id": "00f6b529-5caa-4018-95c8-003d9131c016",
+      "name": "Build Success Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 201
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        700,
+        -120
+      ],
+      "id": "c65fb50e-67a5-4c11-8d11-628d900e7b25",
+      "name": "Respond 201"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    code: 'VALIDATION_ERROR',\n    message: 'Customer payload is invalid',\n    missingFields: $json.validation.missingFields,\n    invalidEmail: $json.validation.invalidEmail\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        160
+      ],
+      "id": "47445fd9-874e-4a6a-a5df-aa1151a35d88",
+      "name": "Build Validation Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -180,
+        160
+      ],
+      "id": "ba6bcda6-d941-4293-920b-5fc219840892",
+      "name": "Respond 400"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Customer Persistence Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Customer": {
+      "main": [
+        [
+          {
+            "node": "Is Customer Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Customer Valid?": {
+      "main": [
+        [
+          {
+            "node": "Create Request ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Request ID": {
+      "main": [
+        [
+          {
+            "node": "Normalize Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Customer": {
+      "main": [
+        [
+          {
+            "node": "Persist Customer + Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Customer + Audit": {
+      "main": [
+        [
+          {
+            "node": "Build Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Success Response": {
+      "main": [
+        [
+          {
+            "node": "Respond 201",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Validation Error": {
+      "main": [
+        [
+          {
+            "node": "Respond 400",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f5e1c651-8797-4d92-870d-93cd8c40ecfb",
+  "meta": {},
+  "tags": []
+}
