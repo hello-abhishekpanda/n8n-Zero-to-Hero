@@ -1,0 +1,212 @@
+{
+  "name": "N8N-F07B-Pagination-and-Batching",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -900,
+        0
+      ],
+      "id": "a0934e11-0875-4158-aff4-d3449e481077",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "url": "https://dummyjson.com/users",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "5"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "skip",
+                    "value": "={{ $pageCount * 5 }}"
+                  }
+                ]
+              },
+              "limitPagesFetched": true,
+              "maxRequests": 3
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -660,
+        0
+      ],
+      "id": "4f9a269e-b60e-45fb-ae8d-01e419fbeed7",
+      "name": "Fetch Paginated Users"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pages = $input.all();\nconst users = [];\n\nfor (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {\n  const page = pages[pageIndex].json;\n  const pageUsers = Array.isArray(page.users) ? page.users : [];\n\n  for (const user of pageUsers) {\n    users.push({\n      json: {\n        ...user,\n        pagination: {\n          sourcePage: pageIndex + 1,\n          pageSize: page.limit ?? 5,\n          sourceSkip: page.skip ?? null\n        }\n      }\n    });\n  }\n}\n\nreturn users;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -410,
+        0
+      ],
+      "id": "eadd53da-7025-413b-a136-ec68227666b9",
+      "name": "Convert Pages to User Items"
+    },
+    {
+      "parameters": {
+        "batchSize": 2,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -160,
+        0
+      ],
+      "id": "47c1f2fb-e342-4311-88d9-d80d63137593",
+      "name": "Loop Over Users"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => {\n  const user = item.json;\n\n  return {\n    json: {\n      id: user.id,\n      fullName: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),\n      email: user.email ?? null,\n      company: user.company?.name ?? null,\n      city: user.address?.city ?? null,\n      sourcePage: user.pagination?.sourcePage ?? null,\n      status: 'PROCESSED',\n      processedAt: new Date().toISOString()\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        100,
+        120
+      ],
+      "id": "7d8a3c25-b692-41e7-947e-81c36cf6b5cf",
+      "name": "Process User Batch"
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        340,
+        120
+      ],
+      "id": "9fa9a6ee-91df-4830-a664-d4f8f1e7ee02",
+      "name": "Throttle 1 Second",
+      "webhookId": "324b1820-5569-4cf7-9778-759355da37dc"
+    },
+    {
+      "parameters": {
+        "jsCode": "const users = $input.all();\n\nconst pages = [...new Set(\n  users\n    .map(i => i.json.sourcePage)\n    .filter(v => v !== null && v !== undefined)\n)];\n\nreturn [\n  {\n    json: {\n      success: true,\n      message: 'Pagination and batch processing completed',\n      pagesFetched: pages.length,\n      pageNumbersObserved: pages,\n      totalUsersProcessed: users.length,\n      batchSize: 2,\n      users: users.map(i => i.json),\n      completedAt: new Date().toISOString()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        100,
+        -120
+      ],
+      "id": "e5c0db25-f4f3-4561-9e7d-f01abc4118e9",
+      "name": "Build Pagination Summary"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Fetch Paginated Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Paginated Users": {
+      "main": [
+        [
+          {
+            "node": "Convert Pages to User Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Pages to User Items": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Users": {
+      "main": [
+        [
+          {
+            "node": "Build Pagination Summary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process User Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process User Batch": {
+      "main": [
+        [
+          {
+            "node": "Throttle 1 Second",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Throttle 1 Second": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5601c29b-16da-4296-8225-b1857029fb1d",
+  "meta": {},
+  "tags": []
+}

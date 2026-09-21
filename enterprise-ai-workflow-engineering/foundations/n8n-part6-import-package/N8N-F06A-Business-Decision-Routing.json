@@ -1,0 +1,469 @@
+{
+  "name": "N8N-F06A-Business-Decision-Routing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customer-qualification",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -900,
+        0
+      ],
+      "id": "4bce9dd8-5dfd-413b-8e15-c6a365aa6a97",
+      "name": "Customer Qualification Webhook",
+      "webhookId": "517554a6-56b1-44cb-8a25-16772f0b42cc"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? {};\n\nconst requiredFields = [\n  'name',\n  'email',\n  'company',\n  'budget',\n  'employees',\n  'timelineMonths'\n];\n\nconst missingFields = requiredFields.filter((field) => {\n  const value = body[field];\n  return value === undefined ||\n    value === null ||\n    String(value).trim() === '';\n});\n\nreturn [\n  {\n    json: {\n      ...$json,\n      validation: {\n        valid: missingFields.length === 0,\n        missingFields\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -680,
+        0
+      ],
+      "id": "843bc6c9-0812-46fb-b9f8-7e6715a435d0",
+      "name": "Validate Customer"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c3443e52-2c7c-4af8-b4db-5675a21c299e",
+              "leftValue": "={{ $json.validation.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -460,
+        0
+      ],
+      "id": "715cf5e2-eda3-4fe1-982f-2c3d4a5b17ca",
+      "name": "Is Customer Valid?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const requestId =\n  `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\n\nreturn [\n  {\n    json: {\n      ...$json,\n      requestId\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        -120
+      ],
+      "id": "aa8b7fe8-52d6-4860-b8bf-8aa23be0da39",
+      "name": "Create Request ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json;\nconst body = input.body ?? {};\n\nreturn [\n  {\n    json: {\n      requestId: input.requestId,\n      customer: {\n        name: String(body.name).trim(),\n        email: String(body.email).trim().toLowerCase(),\n        company: String(body.company).trim(),\n        budget: Number(body.budget),\n        employees: Number(body.employees),\n        timelineMonths: Number(body.timelineMonths),\n        country: body.country ? String(body.country).trim() : null,\n        source: body.source ?? 'webhook',\n        receivedAt: new Date().toISOString()\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        -120
+      ],
+      "id": "2f10c2ad-0da8-4e75-9175-94c45107db41",
+      "name": "Normalize Customer"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\nconst customer = data.customer;\n\nconst budget = Number(customer.budget ?? 0);\nconst employees = Number(customer.employees ?? 0);\nconst timelineMonths = Number(customer.timelineMonths ?? 999);\n\nconst reasonCodes = [];\n\nif (budget >= 100000) reasonCodes.push('HIGH_BUDGET');\nif (employees >= 1000) reasonCodes.push('ENTERPRISE_SIZE');\nif (timelineMonths <= 3) reasonCodes.push('URGENT_TIMELINE');\n\nlet tier = 'COLD';\nlet score = 20;\n\nif (\n  budget >= 100000 &&\n  employees >= 1000 &&\n  timelineMonths <= 3\n) {\n  tier = 'HOT';\n  score = 90;\n} else if (\n  budget >= 25000 ||\n  employees >= 200\n) {\n  tier = 'WARM';\n  score = 60;\n}\n\nreturn [\n  {\n    json: {\n      ...data,\n      qualification: {\n        tier,\n        score,\n        reasonCodes,\n        evaluatedAt: new Date().toISOString()\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        -120
+      ],
+      "id": "8ab4891e-e53c-4a0c-bf50-0d445cbe1542",
+      "name": "Calculate Qualification"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "749ee635-c0ca-4683-84da-34eb2071231f",
+                    "leftValue": "={{ $json.qualification.tier }}",
+                    "rightValue": "HOT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "HOT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "838bf793-fef2-44b2-88ab-5a8a1a144cf1",
+                    "leftValue": "={{ $json.qualification.tier }}",
+                    "rightValue": "WARM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "WARM"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "19f7b2c1-1720-4a80-a974-2fcde3fcabe2",
+                    "leftValue": "={{ $json.qualification.tier }}",
+                    "rightValue": "COLD",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "COLD"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        500,
+        -120
+      ],
+      "id": "cb185731-2266-4a2d-8dc7-b4ac608f3a9f",
+      "name": "Route by Lead Tier"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      ...$json,\n      routing: {\n        route: 'SALES',\n        priority: 'HIGH',\n        action: 'Immediate sales follow-up'\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        -300
+      ],
+      "id": "ed7f1456-9bab-453d-8e08-59bc8f47a345",
+      "name": "Route HOT to Sales"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      ...$json,\n      routing: {\n        route: 'NURTURE',\n        priority: 'MEDIUM',\n        action: 'Add to nurture campaign'\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        -120
+      ],
+      "id": "03e0bc36-3dff-4b5c-992b-8d835ee84305",
+      "name": "Route WARM to Nurture"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      ...$json,\n      routing: {\n        route: 'STORE',\n        priority: 'LOW',\n        action: 'Store for future follow-up'\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        60
+      ],
+      "id": "0706af47-be0a-4db7-8987-94a69812ff07",
+      "name": "Route COLD to Store"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      ...$json,\n      routing: {\n        route: 'MANUAL_REVIEW',\n        priority: 'REVIEW',\n        action: 'Unknown qualification tier - review manually'\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        240
+      ],
+      "id": "a109854c-3afd-4bb0-a5ae-13e5f48cbbcb",
+      "name": "Fallback Manual Review"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  {\n    success: true,\n    message: 'Customer qualified and routed successfully',\n    requestId: $json.requestId,\n    status: 'QUALIFIED',\n    customer: $json.customer,\n    qualification: $json.qualification,\n    routing: $json.routing\n  }\n}}",
+        "options": {
+          "responseCode": 201
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1040,
+        -120
+      ],
+      "id": "b073ef4a-668c-4db9-82c4-fa53509afa0c",
+      "name": "Respond 201 Success"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      code: 'VALIDATION_ERROR',\n      message: 'Required customer fields are missing',\n      missingFields: $json.validation.missingFields\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        160
+      ],
+      "id": "d1dc329f-5ad4-4875-9b4f-efa0a0e99815",
+      "name": "Build Validation Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  {\n    success: $json.success,\n    code: $json.code,\n    message: $json.message,\n    missingFields: $json.missingFields\n  }\n}}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        20,
+        160
+      ],
+      "id": "dac612c6-4d22-4e1b-8497-392b38675483",
+      "name": "Respond 400 Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Customer Qualification Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Customer": {
+      "main": [
+        [
+          {
+            "node": "Is Customer Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Customer Valid?": {
+      "main": [
+        [
+          {
+            "node": "Create Request ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Request ID": {
+      "main": [
+        [
+          {
+            "node": "Normalize Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Customer": {
+      "main": [
+        [
+          {
+            "node": "Calculate Qualification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Qualification": {
+      "main": [
+        [
+          {
+            "node": "Route by Lead Tier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Lead Tier": {
+      "main": [
+        [
+          {
+            "node": "Route HOT to Sales",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route WARM to Nurture",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route COLD to Store",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback Manual Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route HOT to Sales": {
+      "main": [
+        [
+          {
+            "node": "Respond 201 Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route WARM to Nurture": {
+      "main": [
+        [
+          {
+            "node": "Respond 201 Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route COLD to Store": {
+      "main": [
+        [
+          {
+            "node": "Respond 201 Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback Manual Review": {
+      "main": [
+        [
+          {
+            "node": "Respond 201 Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Validation Error": {
+      "main": [
+        [
+          {
+            "node": "Respond 400 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "82985fc5-cfde-48a0-8203-a3cf09b3a017",
+  "meta": {},
+  "tags": []
+}

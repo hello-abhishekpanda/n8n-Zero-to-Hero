@@ -1,0 +1,83 @@
+{
+  "name": "N8N-F01-Hello-n8n",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d75c8074-6d61-4205-b256-0f61fdac596d",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4fa4c47c-c732-4354-88a9-0c2809d2269e",
+              "name": "name",
+              "value": "Abhishek Panda",
+              "type": "string"
+            },
+            {
+              "id": "e54d6354-422e-4068-894e-8c2bd9a139e6",
+              "name": "course",
+              "value": "n8n Masterclass",
+              "type": "string"
+            },
+            {
+              "id": "500829c9-82fb-42ff-8cec-25b111d1a491",
+              "name": "level",
+              "value": "Beginner",
+              "type": "string"
+            },
+            {
+              "id": "dbb74e4f-17de-4930-9aaa-84cb718ed3ca",
+              "name": "status",
+              "value": "learning",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "a5ab32f8-2dc1-4de6-b81c-209fb0aba516",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "ee4451dc-e68a-4cb6-8ccf-f6dd20f3d9cd",
+  "meta": {
+    "instanceId": "0fc0c1cd4dc1bb2f129548e64db20ee82bc92fdbc1500bdc61318100113aff76"
+  },
+  "nodeGroups": [],
+  "id": "yg6bNqOcCt36VUZd",
+  "tags": []
+}

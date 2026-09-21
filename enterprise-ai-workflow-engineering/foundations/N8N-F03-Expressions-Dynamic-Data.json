@@ -1,0 +1,243 @@
+{
+  "name": "N8N-F03-Expressions-Dynamic-Data",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        -16
+      ],
+      "id": "50118eab-531f-46e5-a214-5e0b11c91b42",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"name\": \"Sarah Johnson\",\n  \"email\": \"sarah@globalinsurance.com\",\n  \"company\": \"Global Insurance Corp\",\n  \"employees\": 12000,\n  \"budget\": 250000\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -128,
+        -16
+      ],
+      "id": "d8463ae0-7881-4c03-8d31-545ca8fadb48",
+      "name": "Create Customers"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9674b3ce-b0b3-464f-b769-d7818c37fda1",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "27a4cf8d-2bc8-459e-a860-d83e82348f7c",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "0fc27102-ff71-4185-b2a9-9a0af9581a0a",
+              "name": "company",
+              "value": "={{ $json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "7c23d925-7607-4b90-a6af-f13e9c7b2e75",
+              "name": "employees",
+              "value": "={{ $json.employees }}",
+              "type": "number"
+            },
+            {
+              "id": "78c44d26-2661-4417-b733-1dce9cdd5bbb",
+              "name": "budget",
+              "value": "={{ $json.budget }}",
+              "type": "number"
+            },
+            {
+              "id": "b9400392-7f6b-46df-98d8-3bb202e8939e",
+              "name": "segment",
+              "value": "Enterprise",
+              "type": "string"
+            },
+            {
+              "id": "4f79f294-2f1b-4b67-8390-6967a2847d77",
+              "name": "source",
+              "value": "n8n-masterclass",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        96,
+        -16
+      ],
+      "id": "13fdfe55-08f4-490c-a51b-012ab5b6fa2c",
+      "name": "Transform Customer"
+    },
+    {
+      "parameters": {
+        "jsCode": "const customer = $json;\n\nlet priority = 'Normal';\n\nif (customer.budget >= 100000) {\n  priority = 'High';\n}\n\nreturn [\n  {\n    json: {\n      ...customer,\n      priority\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -16
+      ],
+      "id": "4ae4d2fd-034d-4c38-9d86-262c63636faa",
+      "name": "Classify Customer"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "32809877-b551-472c-a357-c682ae6bf7ed",
+              "name": "greeting",
+              "value": "=Hello {{$json.name}}",
+              "type": "string"
+            },
+            {
+              "id": "c5bea352-111f-4391-9586-6377649e16a5",
+              "name": "companyMessage",
+              "value": "=Welcome {{$json.company}}",
+              "type": "string"
+            },
+            {
+              "id": "52d1e115-c8c5-49f9-b5e2-9dc2df2b9c19",
+              "name": "budgetMessage",
+              "value": "=Your current budget is ${{$json.budget}}",
+              "type": "string"
+            },
+            {
+              "id": "1cd37f27-973f-4c65-b9b8-95c507abd21d",
+              "name": "budgetWithTax",
+              "value": "={{$json.budget * 1.18}}",
+              "type": "string"
+            },
+            {
+              "id": "0979b114-dbd8-404e-9795-edead4d3697b",
+              "name": "segment",
+              "value": "={{$json.employees >= 1000 ? 'Enterprise' : 'SMB'}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        544,
+        -16
+      ],
+      "id": "46451d61-8bfe-4b3b-91b0-79b1432f8b83",
+      "name": "Generate Dynamic Message"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8e4252f3-75cd-4399-bdec-308bd14a5632",
+              "name": "summary",
+              "value": "= {{ $('Create Customers').item.json.name }} from {{ $('Create Customers').item.json.company }} is classified as {{$json.segment}} with a budget of {{ $('Create Customers').item.json.budget }} .",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        768,
+        -16
+      ],
+      "id": "2fb704ab-9bce-4b60-8cab-e6572026197f",
+      "name": "Create Business Summary"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Create Customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Customers": {
+      "main": [
+        [
+          {
+            "node": "Transform Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Customer": {
+      "main": [
+        [
+          {
+            "node": "Classify Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Customer": {
+      "main": [
+        [
+          {
+            "node": "Generate Dynamic Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Dynamic Message": {
+      "main": [
+        [
+          {
+            "node": "Create Business Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b461dd04-d177-4871-adde-4a821ee6d339",
+  "meta": {
+    "instanceId": "0fc0c1cd4dc1bb2f129548e64db20ee82bc92fdbc1500bdc61318100113aff76"
+  },
+  "nodeGroups": [],
+  "id": "ih6UzeVwRNTV2MUK",
+  "tags": []
+}

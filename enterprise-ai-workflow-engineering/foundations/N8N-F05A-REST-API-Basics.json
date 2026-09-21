@@ -1,0 +1,100 @@
+{
+  "name": "N8N-F05A-REST-API-Basics",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        0
+      ],
+      "id": "daebc68c-3e34-45f4-8e65-9985d60c5d85",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"userId\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -300,
+        0
+      ],
+      "id": "df8743e2-8ebc-4d6f-be54-5580768f062b",
+      "name": "Create API Input"
+    },
+    {
+      "parameters": {
+        "url": "=https://jsonplaceholder.typicode.com/users/{{ $json.userId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -60,
+        0
+      ],
+      "id": "77e2bae2-0bc7-4936-b81d-e4a65808fe8f",
+      "name": "GET User from REST API"
+    },
+    {
+      "parameters": {
+        "jsCode": "const api = $json;\n\nreturn [\n  {\n    json: {\n      success: true,\n      source: 'JSONPlaceholder',\n      user: {\n        id: api.id ?? null,\n        name: api.name ?? null,\n        username: api.username ?? null,\n        email: api.email ?? null,\n        phone: api.phone ?? null,\n        website: api.website ?? null,\n        company: api.company?.name ?? null\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "cbcdb0f7-9160-4f5d-8374-93b865de519a",
+      "name": "Build API Result"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Create API Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create API Input": {
+      "main": [
+        [
+          {
+            "node": "GET User from REST API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET User from REST API": {
+      "main": [
+        [
+          {
+            "node": "Build API Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}

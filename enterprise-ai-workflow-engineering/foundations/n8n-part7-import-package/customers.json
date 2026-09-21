@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "name": "Sarah Johnson",
+    "company": "Global Insurance Corp",
+    "budget": 250000
+  },
+  {
+    "id": 2,
+    "name": "David Chen",
+    "company": "TechNova",
+    "budget": 50000
+  },
+  {
+    "id": 3,
+    "name": "John Doe",
+    "company": "Small Startup",
+    "budget": 5000
+  },
+  {
+    "id": 4,
+    "name": "Priya Sharma",
+    "company": "Enterprise Systems",
+    "budget": 175000
+  },
+  {
+    "id": 5,
+    "name": "Michael Lee",
+    "company": "Cloud Labs",
+    "budget": 30000
+  }
+]

@@ -1,0 +1,271 @@
+{
+  "name": "N8N-F05B-Customer-Enrichment-API",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customer-enrichment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -920,
+        0
+      ],
+      "id": "60e62a3d-2673-4252-8f4c-1cf89e0f8d0a",
+      "name": "Customer Enrichment Webhook",
+      "webhookId": "aee81d16-bd8e-4b84-aa5d-523ec40da9ee"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? {};\n\nconst requiredFields = ['name', 'email', 'company'];\n\nconst missingFields = requiredFields.filter((field) => {\n  const value = body[field];\n  return value === undefined || value === null || String(value).trim() === '';\n});\n\nreturn [\n  {\n    json: {\n      ...$json,\n      validation: {\n        valid: missingFields.length === 0,\n        missingFields\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -700,
+        0
+      ],
+      "id": "afe9482a-c31c-4f3b-81db-35c3e3e485c9",
+      "name": "Validate Customer"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4a2b075c-8718-4e10-b33e-4f4e144e2f22",
+              "leftValue": "={{ $json.validation.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -480,
+        0
+      ],
+      "id": "340ea35c-6f08-49dd-93a1-f233631bb7af",
+      "name": "Is Customer Valid?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json;\n\nconst requestId =\n  `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\n\nreturn [\n  {\n    json: {\n      ...input,\n      requestId\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -120
+      ],
+      "id": "afe3fe40-fe51-4a47-b8b7-46d2208be403",
+      "name": "Create Request ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json;\nconst body = input.body ?? {};\n\nif (!body.name || !body.email || !body.company) {\n  throw new Error('Normalize Customer expected body.name, body.email and body.company');\n}\n\nconst enrichmentUserId = Number(body.userId ?? 1);\n\nreturn [\n  {\n    json: {\n      requestId: input.requestId,\n      enrichmentUserId,\n      customer: {\n        name: String(body.name).trim(),\n        email: String(body.email).trim().toLowerCase(),\n        company: String(body.company).trim(),\n        budget: body.budget ?? null,\n        country: body.country ?? null,\n        source: body.source ?? 'webhook',\n        receivedAt: new Date().toISOString()\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -120
+      ],
+      "id": "4c16ec35-f801-47f9-b63f-7c8ef7c4bae3",
+      "name": "Normalize Customer"
+    },
+    {
+      "parameters": {
+        "url": "=https://jsonplaceholder.typicode.com/users/{{ $json.enrichmentUserId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        250,
+        -120
+      ],
+      "id": "24d54d15-2578-4f05-8936-04882fc766c0",
+      "name": "GET Enrichment Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const api = $json;\nconst original = $('Normalize Customer').first().json;\n\nreturn [\n  {\n    json: {\n      success: true,\n      message: 'Customer enriched successfully',\n      requestId: original.requestId,\n      status: 'ENRICHED',\n      customer: original.customer,\n      enrichment: {\n        externalId: api.id ?? null,\n        name: api.name ?? null,\n        username: api.username ?? null,\n        email: api.email ?? null,\n        phone: api.phone ?? null,\n        website: api.website ?? null,\n        company: api.company?.name ?? null,\n        city: api.address?.city ?? null\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        510,
+        -120
+      ],
+      "id": "6a51cd1c-f348-4234-9477-cdc4b0e10eab",
+      "name": "Build Enriched Customer"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 201
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        770,
+        -120
+      ],
+      "id": "65bd9fb2-8b4a-407c-9f50-07c67f87143a",
+      "name": "Respond 201 Success"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      code: 'VALIDATION_ERROR',\n      message: 'Required customer fields are missing',\n      missingFields: $json.validation?.missingFields ?? []\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        150
+      ],
+      "id": "e97d4a5a-87a6-4b1a-be36-41ace50a3dda",
+      "name": "Build Validation Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        20,
+        150
+      ],
+      "id": "fd37f81f-826d-48de-aec1-7eedcf66feeb",
+      "name": "Respond 400 Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Customer Enrichment Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Customer": {
+      "main": [
+        [
+          {
+            "node": "Is Customer Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Customer Valid?": {
+      "main": [
+        [
+          {
+            "node": "Create Request ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Request ID": {
+      "main": [
+        [
+          {
+            "node": "Normalize Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Customer": {
+      "main": [
+        [
+          {
+            "node": "GET Enrichment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Enrichment Data": {
+      "main": [
+        [
+          {
+            "node": "Build Enriched Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Enriched Customer": {
+      "main": [
+        [
+          {
+            "node": "Respond 201 Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Validation Error": {
+      "main": [
+        [
+          {
+            "node": "Respond 400 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}

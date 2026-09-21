@@ -1,0 +1,8 @@
+{
+  "name": "John Doe",
+  "email": "john@smallstartup.com",
+  "company": "Small Startup",
+  "budget": 5000,
+  "employees": 10,
+  "timelineMonths": 12
+}

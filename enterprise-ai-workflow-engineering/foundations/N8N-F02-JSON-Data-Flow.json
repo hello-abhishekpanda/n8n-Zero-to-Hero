@@ -1,0 +1,151 @@
+{
+  "name": "N8N-F02-JSON-Data-Flow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        -16
+      ],
+      "id": "50118eab-531f-46e5-a214-5e0b11c91b42",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"name\": \"Sarah Johnson\",\n  \"email\": \"sarah@globalinsurance.com\",\n  \"company\": \"Global Insurance Corp\",\n  \"employees\": 12000,\n  \"budget\": 250000\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -128,
+        -16
+      ],
+      "id": "d8463ae0-7881-4c03-8d31-545ca8fadb48",
+      "name": "Create Customers"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9674b3ce-b0b3-464f-b769-d7818c37fda1",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "27a4cf8d-2bc8-459e-a860-d83e82348f7c",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "0fc27102-ff71-4185-b2a9-9a0af9581a0a",
+              "name": "company",
+              "value": "={{ $json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "7c23d925-7607-4b90-a6af-f13e9c7b2e75",
+              "name": "employees",
+              "value": "={{ $json.employees }}",
+              "type": "number"
+            },
+            {
+              "id": "78c44d26-2661-4417-b733-1dce9cdd5bbb",
+              "name": "budget",
+              "value": "={{ $json.budget }}",
+              "type": "number"
+            },
+            {
+              "id": "b9400392-7f6b-46df-98d8-3bb202e8939e",
+              "name": "segment",
+              "value": "Enterprise",
+              "type": "string"
+            },
+            {
+              "id": "4f79f294-2f1b-4b67-8390-6967a2847d77",
+              "name": "source",
+              "value": "n8n-masterclass",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        96,
+        -16
+      ],
+      "id": "13fdfe55-08f4-490c-a51b-012ab5b6fa2c",
+      "name": "Transform Customer"
+    },
+    {
+      "parameters": {
+        "jsCode": "const customer = $json;\n\nlet priority = 'Normal';\n\nif (customer.budget >= 100000) {\n  priority = 'High';\n}\n\nreturn [\n  {\n    json: {\n      ...customer,\n      priority\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -16
+      ],
+      "id": "4ae4d2fd-034d-4c38-9d86-262c63636faa",
+      "name": "Classify Customer"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Create Customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Customers": {
+      "main": [
+        [
+          {
+            "node": "Transform Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Customer": {
+      "main": [
+        [
+          {
+            "node": "Classify Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a4b39361-a5ac-4090-9c5d-12619c4059c3",
+  "meta": {
+    "instanceId": "0fc0c1cd4dc1bb2f129548e64db20ee82bc92fdbc1500bdc61318100113aff76"
+  },
+  "nodeGroups": [],
+  "id": "ih6UzeVwRNTV2MUK",
+  "tags": []
+}

@@ -1,0 +1,226 @@
+{
+  "name": "N8N-F04-Customer-Webhook-API",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customer-intake",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -528,
+        0
+      ],
+      "id": "506c9a73-0f16-4a3f-b32b-55436a8435b7",
+      "name": "Customer Intake Webhook",
+      "webhookId": "70e96380-749f-4f8c-a5b6-7d2db4422f31"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? {};\n\nconst requiredFields = [\n  'name',\n  'email',\n  'company'\n];\n\nconst missingFields = requiredFields.filter((field) => {\n  const value = body[field];\n\n  return value === undefined\n    || value === null\n    || String(value).trim() === '';\n});\n\nconst valid = missingFields.length === 0;\n\nreturn [\n  {\n    json: {\n      ...$json,\n      validation: {\n        valid,\n        missingFields\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "a8b717d4-085e-4f64-b4e2-8d1562bf7d03",
+      "name": "Validate Customer"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5cb1d13a-3f8d-45ee-a231-5b07b63a0079",
+              "leftValue": "={{ $json.validation.valid }}",
+              "rightValue": "=true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -144,
+        0
+      ],
+      "id": "2f69e47f-ecab-4693-b7ff-dd5c9722a6eb",
+      "name": "Is Customer Valid?",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json;\n\nconst body = input.body ?? {};\n\nif (!body.name || !body.email || !body.company) {\n  throw new Error(\n    'Normalize Customer expected body.name, body.email and body.company'\n  );\n}\n\nreturn [\n  {\n    json: {\n      requestId: input.requestId,\n      customer: {\n        name: String(body.name).trim(),\n        email: String(body.email).trim().toLowerCase(),\n        company: String(body.company).trim(),\n        budget: body.budget ?? null,\n        source: body.source ?? 'webhook',\n        receivedAt: new Date().toISOString()\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "826dcbb0-62be-4f58-9fde-7a1abf29fe37",
+      "name": "Normalize Customer"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        608,
+        -48
+      ],
+      "id": "1e62edcc-a93d-487b-931c-51b0ee6f938a",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\n\nconst requestId =\n  `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\n\nreturn [\n  {\n    json: {\n      ...data,\n      requestId\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        -48
+      ],
+      "id": "e5410b40-2d85-40a6-a476-e8bf4661f72c",
+      "name": "requestId"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      code: 'VALIDATION_ERROR',\n      message: 'Required customer fields are missing',\n      missingFields: $json.validation.missingFields\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        96
+      ],
+      "id": "380a1a1a-b8c3-4ecf-b331-f2fa7187f907",
+      "name": "Build Validation Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  {\n    success: $json.success,\n    code: $json.code,\n    message: $json.message,\n    missingFields: $json.missingFields\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        304,
+        96
+      ],
+      "id": "41ca251f-3feb-4d5c-a727-b06e7b1ad262",
+      "name": "Respond 400 Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Customer Intake Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Customer": {
+      "main": [
+        [
+          {
+            "node": "Is Customer Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Customer Valid?": {
+      "main": [
+        [
+          {
+            "node": "Normalize Customer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Customer": {
+      "main": [
+        [
+          {
+            "node": "requestId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "requestId": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Validation Error": {
+      "main": [
+        [
+          {
+            "node": "Respond 400 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "846f5560-18ae-47b7-975a-e1a847f2c716",
+  "meta": {
+    "instanceId": "0fc0c1cd4dc1bb2f129548e64db20ee82bc92fdbc1500bdc61318100113aff76"
+  },
+  "nodeGroups": [],
+  "id": "z2PBJJddEoArjT1I",
+  "tags": []
+}

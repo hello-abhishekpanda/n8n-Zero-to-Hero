@@ -1,0 +1,156 @@
+{
+  "name": "N8N-F06B-Merge-Fanout-Fanin",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        0
+      ],
+      "id": "f39863ac-01fb-4734-bb1c-9da8b56f4446",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"requestId\": \"req_demo_001\",\n  \"customer\": {\n    \"name\": \"Sarah Johnson\",\n    \"company\": \"Global Insurance Corp\"\n  },\n  \"qualification\": {\n    \"tier\": \"HOT\",\n    \"score\": 90\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -480,
+        0
+      ],
+      "id": "16848786-bb7f-46f3-9387-b49e1ff8e595",
+      "name": "Create Qualified Lead"
+    },
+    {
+      "parameters": {
+        "jsCode": "const tier = $json.qualification.tier;\n\nlet route = 'STORE';\nlet priority = 'LOW';\n\nif (tier === 'HOT') {\n  route = 'SALES';\n  priority = 'HIGH';\n} else if (tier === 'WARM') {\n  route = 'NURTURE';\n  priority = 'MEDIUM';\n}\n\nreturn [\n  {\n    json: {\n      requestId: $json.requestId,\n      routing: {\n        route,\n        priority\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        -120
+      ],
+      "id": "94baf26e-43f0-4a2d-989f-68d70fb07b60",
+      "name": "Create Routing Context"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      requestId: $json.requestId,\n      audit: {\n        tier: $json.qualification.tier,\n        score: $json.qualification.score,\n        evaluatedAt: new Date().toISOString()\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        120
+      ],
+      "id": "459717f2-b01c-4950-b58a-780462198204",
+      "name": "Create Audit Context"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        60,
+        0
+      ],
+      "id": "fa2f7793-6e86-4959-aa6f-9dda85d0ed2c",
+      "name": "Merge Routing + Audit"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: true,\n      requestId: $json.requestId,\n      routing: $json.routing ?? null,\n      audit: $json.audit ?? null\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        0
+      ],
+      "id": "e93156da-63c2-4b09-a038-5d3b2a2da6b0",
+      "name": "Build Merged Result"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Create Qualified Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Qualified Lead": {
+      "main": [
+        [
+          {
+            "node": "Create Routing Context",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Audit Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Routing Context": {
+      "main": [
+        [
+          {
+            "node": "Merge Routing + Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Audit Context": {
+      "main": [
+        [
+          {
+            "node": "Merge Routing + Audit",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Routing + Audit": {
+      "main": [
+        [
+          {
+            "node": "Build Merged Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7d1b3dd3-967b-4f6e-92d9-1d84c41d184b",
+  "meta": {},
+  "tags": []
+}
